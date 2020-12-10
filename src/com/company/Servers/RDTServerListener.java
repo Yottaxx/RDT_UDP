@@ -14,6 +14,7 @@ import java.io.*;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 // TODO: 做消息队列，单独线程receive
 public class RDTServerListener extends Thread implements ReliableFunction, SlidingWindow {
@@ -30,6 +31,11 @@ public class RDTServerListener extends Thread implements ReliableFunction, Slidi
     HashMap<Integer,Queue<Integer>> dataWindows = new HashMap<Integer,Queue<Integer>>();  // port receive datas
     HashMap<Integer, FinishConnection> finishConnectionHashMap = new HashMap<Integer, FinishConnection>();
     HashMap<Integer, GoBackN> goBackNHashMap =new HashMap<Integer, GoBackN>();
+    private final Object notifyObj = new Object();
+    private final Object notifyFunc = new Object();
+
+    public static final Queue<DataFormat> messageQueue = new ConcurrentLinkedQueue<DataFormat>();
+
     public RDTServerListener() throws SocketException {
         this("RDTServer"+ new Timer().toString(),5555,5556);
     }
@@ -125,80 +131,115 @@ public class RDTServerListener extends Thread implements ReliableFunction, Slidi
         new Thread(sannerThread).start();
     }
 
-    public void run() {
-        scannerThread();
-        DataFormat receiveDataFormat = new DataFormat();
-        while (true) {
-            try {
-//                if(isServer) {
-//                    receive(dataFormat);
-//                    send(new DataFormat());
-//                }
-//                else
-//                {
-//                    send(new DataFormat());
-//                    receive(dataFormat);
-//                }
-                receiveDataFormat = receive(receiveDataFormat);
-                int sourcePort =receiveDataFormat.getSourcePort();
-                establishConnection(receiveDataFormat);
-                finishConnection(receiveDataFormat);
-                goBackN(receiveDataFormat);
+    public void receiveThread()
+    {
+        Runnable runnable =new Runnable() {
+            @Override
+            public void run() {
+                while(true) {
+                    DataFormat receiveDataFormat = new DataFormat();
+                    synchronized (notifyObj) {
+                        // 主线程等待唤醒。
+                        try {
+                            receiveDataFormat = receive(receiveDataFormat);
+                            if (receiveDataFormat.isEmpty())
+                                continue;
+                            synchronized (notifyFunc) {
+                                messageQueue.add(receiveDataFormat);
+                                notifyFunc.notifyAll();
+                            }
+                        } catch (IOException | ClassNotFoundException e) {
+                            e.printStackTrace();
+                        }
+                        System.out.println("---------notifyAll------------");
 
+                        notifyObj.notifyAll();
 
+                    }
+//                    try {
+//                        System.out.println(Thread.currentThread().getName() + " sleep");
+//                        sleep(TIME_WAIT);
+//                    } catch (InterruptedException e) {
+//                        e.printStackTrace();
+//                    }
 
-            } catch (IOException | ClassNotFoundException ignored) {
+                }
+
             }
+        };
+        new Thread(runnable,"receiveThread").start();
+    }
+
+
+
+
+    public void run() {
+        try {
+            scannerThread();
+            establishConnection();
+            finishConnection();
+            goBackN();
+            receiveThread();
+
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
         }
     }
 
 
 
     @Override
-    public boolean establishConnection(DataFormat receiveDataFormat) throws IOException, ClassNotFoundException {
-        return EstablishConnection.establishConnectCore(receiveDataFormat,socket,this.addressCon,connectionHashMap);
-//        System.out.println("建立连接过程"+receiveDataFormat.getSourcePort()+" "+receiveDataFormat.getDestinationPort());
-//
-//        if(receiveDataFormat.getPrimitiveType().equals(PrimitiveType.getSynType())) {
-//            System.out.println("同步信号捕获");
-//
-//            if (connectionHashMap.containsKey(receiveDataFormat.getSourcePort())) {
-//                EstablishConnection establishConnectionObj = connectionHashMap.get(receiveDataFormat.getSourcePort());
-//                System.out.println("--------进入连接池判断连接进度-------");
-//                if(establishConnectionObj.isConnected())
-//                    return true; //错误连接请求不予回复
-//
-//                if (establishConnectionObj.getData(receiveDataFormat)) {
-//                    if (!establishConnectionObj.isConnected()) {
-//                        send(establishConnectionObj.getApply(receiveDataFormat),receiveDataFormat.getSourcePort());
-//                        return true;
-//                    }
-//                    else {
-//                       return false;
-//                    }
-//                }
-//                else
-//                    return true;  //流氓连接请求 不予回复
-//            } else {
-//                System.out.println("------加入连接哈希map port"+receiveDataFormat.getSourcePort()+"-----");
-//                connectionHashMap.put(receiveDataFormat.getSourcePort(), new EstablishConnection(true));
-//                {
-//                    EstablishConnection establishConnectionObj = connectionHashMap.get(receiveDataFormat.getSourcePort());
-//                    if (establishConnectionObj.getData(receiveDataFormat)) {
-//                        send(establishConnectionObj.getApply(receiveDataFormat),receiveDataFormat.getSourcePort());                    }
-//                    return true;
-//
-//                }
-//            }
-//        }
-//        else
-//            return false;
-
+    public void establishConnection() throws IOException, ClassNotFoundException {
+        Runnable runnable =new Runnable() {
+            @Override
+            public void run() {
+                while (true) {
+                    synchronized (notifyFunc) {
+                        try {
+                            System.out.println(Thread.currentThread().getName() + " wait");
+                            notifyFunc.wait();
+                            System.out.println("--------establishConnection----------");
+                            if (messageQueue.peek() != null)
+                                if (EstablishConnection.establishConnectCore(messageQueue.peek(), socket, addressCon, connectionHashMap))
+                                    messageQueue.poll();
+                            // 打印输出结果
+                            System.out.println("--------establishConnected----------");
+                        } catch (InterruptedException | IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+        };
+        new Thread(runnable,"establishConnection").start();
     }
 
     @Override
-    public boolean finishConnection(DataFormat receiveDataFormat) throws IOException, ClassNotFoundException {
-        return FinishConnection.finishConnection(receiveDataFormat,socket,this.addressCon,connectionHashMap,finishConnectionHashMap);
+    public void finishConnection() throws IOException, ClassNotFoundException {
+        Runnable runnable =new Runnable() {
+            @Override
+            public void run() {
+                while (true) {
+                    synchronized (notifyFunc) {
+                        try {
+                            // 打印输出结果
+                            // 唤醒当前的wait线程
+                            System.out.println(Thread.currentThread().getName() + " wait");
+                            notifyFunc.wait();
+                            System.out.println("--------finishConnection----------");
+                            if (messageQueue.peek() != null)
+                                if (FinishConnection.finishConnection(messageQueue.peek(), socket, addressCon, connectionHashMap, finishConnectionHashMap))
+                                    messageQueue.poll();
+                            // 打印输出结果
+                            System.out.println("--------finishConnected----------");
+                        } catch (InterruptedException | IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+        };
+        new Thread(runnable,"finishConnection").start();
     }
 
 
@@ -257,20 +298,41 @@ public class RDTServerListener extends Thread implements ReliableFunction, Slidi
     }
 
     @Override
-    public void goBackN(DataFormat dataFormat) throws IOException {
-        int sourcePort = dataFormat.getSourcePort();
-        if(dataFormat.getPrimitiveType().equals(PrimitiveType.getAckType())) {
-            if (connectionHashMap.containsKey(sourcePort)) {
-                if (connectionHashMap.get(sourcePort).isConnected()) {
-                    if (!goBackNHashMap.containsKey(sourcePort)) {
-                        goBackNHashMap.put(sourcePort, new GoBackN(true, this.addressCon, this.connectionPort, socket));
+    public void goBackN() {
+        Runnable runnable = () -> {
+            while (true) {
+                synchronized (notifyFunc) {
+                    try {
+                        // 打印输出结果
+                        // 唤醒当前的wait线程
+                        System.out.println(Thread.currentThread().getName() + " wait");
+                        notifyFunc.wait();
+                        System.out.println("--------goBackNConnection----------");
+                        if (messageQueue.peek() != null)
+                            if (GoBackN.goBackNCore(messageQueue.peek(), socket, addressCon, connectionHashMap, goBackNHashMap))
+                                messageQueue.poll();
+                        // 打印输出结果
+                        System.out.println("--------goBackNConnected----------");
+                    } catch (InterruptedException | IOException e) {
+                        e.printStackTrace();
                     }
-                    goBackNHashMap.get(sourcePort).getACK(dataFormat, socket);
                 }
-            } else {
-                System.out.println("-----非连接端口请求-------");
             }
-        }
+        };
+        new Thread(runnable,"goBackN").start();
+//        int sourcePort = dataFormat.getSourcePort();
+//        if(dataFormat.getPrimitiveType().equals(PrimitiveType.getAckType())) {
+//            if (connectionHashMap.containsKey(sourcePort)) {
+//                if (connectionHashMap.get(sourcePort).isConnected()) {
+//                    if (!goBackNHashMap.containsKey(sourcePort)) {
+//                        goBackNHashMap.put(sourcePort, new GoBackN(true, this.addressCon, this.connectionPort, socket));
+//                    }
+//                    goBackNHashMap.get(sourcePort).getACK(dataFormat, socket);
+//                }
+//            } else {
+//                System.out.println("-----非连接端口请求-------");
+//            }
+//        }
     }
 
     @Override

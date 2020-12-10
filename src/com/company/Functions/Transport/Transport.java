@@ -16,7 +16,16 @@ public class Transport {
     public static DataFormat receive(DataFormat receiveData, DatagramSocket socket) throws IOException, ClassNotFoundException {
         byte []buf = new byte[512];
         DatagramPacket packet = new DatagramPacket(buf, buf.length);
-        socket.receive(packet);
+
+        try {
+            socket.receive(packet);
+        }
+        catch (Exception e) {
+//            System.out.println( "---------本时间段内无消息---------");
+            receiveData =new DataFormat();
+            receiveData.setPrimitiveType(new PrimitiveType(PrimitiveType.getEmptyType()));
+            return receiveData;
+        }
 //                String receive = new String(packet.getData(), 0, packet.getLength());
         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(buf);
 
@@ -95,6 +104,8 @@ public class Transport {
             dataFormat.setAcknowledgementNumber(ackNum);
             if(i==data.length/DataFormat.maxBuffer)
             {
+                if(data.length%DataFormat.maxBuffer==0)
+                    return;
                 dataFormat.setBuf(Arrays.copyOfRange(data,i*DataFormat.maxBuffer,data.length%DataFormat.maxBuffer));
                 dataFormat.setSequenceNumber(sequenceNum+now+dataFormat.getBuf().length-1);
 

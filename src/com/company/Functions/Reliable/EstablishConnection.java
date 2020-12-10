@@ -7,7 +7,9 @@ import com.company.Utils.PrimitiveType;
 import java.io.IOException;
 import java.net.DatagramSocket;
 import java.util.HashMap;
+import java.util.Queue;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class EstablishConnection {
     protected Integer sourcePort;
@@ -78,7 +80,6 @@ public class EstablishConnection {
         }
         else {
             System.out.println("非同步信号");
-
             return false;
         }
     }

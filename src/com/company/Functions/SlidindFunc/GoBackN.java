@@ -1,5 +1,7 @@
 package com.company.Functions.SlidindFunc;
 
+import com.company.Functions.Reliable.EstablishConnection;
+import com.company.Functions.Reliable.FinishConnection;
 import com.company.Functions.Transport.Transport;
 import com.company.Utils.DataFormat;
 import com.company.Utils.PrimitiveType;
@@ -7,6 +9,7 @@ import com.company.Utils.PrimitiveType;
 import java.io.IOException;
 import java.net.DatagramSocket;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 public class GoBackN {
@@ -77,6 +80,27 @@ public class GoBackN {
     public void setConnectionPort(Integer connectionPort) {
         this.connectionPort = connectionPort;
     }
+    public static boolean goBackNCore(DataFormat dataFormat, DatagramSocket socket,
+                                           String addressCon, HashMap<Integer, EstablishConnection> connectionHashMap,
+                                           HashMap<Integer, GoBackN> goBackNHashMap) throws IOException {
+        int sourcePort = dataFormat.getSourcePort();
+        if(dataFormat.getPrimitiveType().equals(PrimitiveType.getAckType())) {
+            if (connectionHashMap.containsKey(sourcePort)) {
+                if (connectionHashMap.get(sourcePort).isConnected()) {
+                    if (!goBackNHashMap.containsKey(sourcePort)) {
+                        goBackNHashMap.put(sourcePort, new GoBackN(true, addressCon, sourcePort, socket));
+                    }
+                    goBackNHashMap.get(sourcePort).getACK(dataFormat, socket);
+                }
+            } else {
+                System.out.println("-----非连接端口请求-------");
+            }
+            return true;
+        }
+        else
+            return  false;
+
+    }
 
 
     //TODO:TIME
@@ -116,7 +140,7 @@ public class GoBackN {
             }
             else
             {
-                Transport.send(socket, addressCon, connectionPort, ackNum, new byte[pointerSendBegin + sendWindowSize - 1 - pointerSendEnd]);
+                Transport.send(socket, addressCon, connectionPort, ackNum, new byte[Math.min(pointerSendBegin + sendWindowSize - 1 - pointerSendEnd,1)]);
                 pointerSendEnd = pointerSendBegin+sendWindowSize-1;
             }
             return true;

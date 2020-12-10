@@ -4,7 +4,7 @@ import java.io.Serializable;
 import java.util.Arrays;
 
 public class DataFormat implements Serializable {
-    public static final Integer maxBuffer =500; //head 12
+    public static final Integer maxBuffer =400; //head 12
     public byte[] sourcePort=new byte[2];
     public byte[] destinationPort=new byte[2];
     public byte[] sequenceNumber=new byte[4];
@@ -13,6 +13,11 @@ public class DataFormat implements Serializable {
     public byte[] connectionID=new byte[2];
     public byte[] primitiveType =new byte[2];
     public byte[] buf=new byte[1];
+
+    public boolean isEmpty()
+    {
+        return this.getPrimitiveType().equals(PrimitiveType.getEmptyType());
+    }
 
     public void setWindow(Integer window) {
 
