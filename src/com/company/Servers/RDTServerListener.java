@@ -5,6 +5,7 @@ import com.company.Functions.Reliable.EstablishConnection;
 import com.company.Functions.Reliable.FinishConnection;
 import com.company.Functions.ReliableFunction;
 import com.company.Functions.SlidindFunc.GoBackN;
+import com.company.Functions.SlidindFunc.Selective;
 import com.company.Functions.SlidingWindow;
 import com.company.Functions.Transport.Transport;
 import com.company.Utils.DataFormat;
@@ -31,10 +32,12 @@ public class RDTServerListener extends Thread implements ReliableFunction, Slidi
     HashMap<Integer,Queue<Integer>> dataWindows = new HashMap<Integer,Queue<Integer>>();  // port receive datas
     HashMap<Integer, FinishConnection> finishConnectionHashMap = new HashMap<Integer, FinishConnection>();
     HashMap<Integer, GoBackN> goBackNHashMap =new HashMap<Integer, GoBackN>();
+    HashMap<Integer, Selective> selectiveHashMap =new HashMap<Integer, Selective>();
+
     private final Object notifyObj = new Object();
     private final Object notifyFunc = new Object();
-
-    public static final Queue<DataFormat> messageQueue = new ConcurrentLinkedQueue<DataFormat>();
+    private final Object notifySend = new Object();
+    public static final Queue<DataFormat> messageQueue = Transport.messageQueue;
 
     public RDTServerListener() throws SocketException {
         this("RDTServer"+ new Timer().toString(),5555,5556);
@@ -113,9 +116,9 @@ public class RDTServerListener extends Thread implements ReliableFunction, Slidi
                         {
                             if(connectionHashMap.get(destinationPort).isConnected())
                             {
-                                goBackNHashMap.put(destinationPort,new GoBackN(false,addressCon,destinationPort, socket));
+                                selectiveHashMap.put(destinationPort,new Selective(false,addressCon,destinationPort, socket));
                                 try {
-                                    goBackNHashMap.get(destinationPort).beginSend(new DataFormat(),socket);
+                                    selectiveHashMap.get(destinationPort).beginSend(new DataFormat(),socket);
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                 }
@@ -141,14 +144,22 @@ public class RDTServerListener extends Thread implements ReliableFunction, Slidi
                     synchronized (notifyObj) {
                         // 主线程等待唤醒。
                         try {
+                            sleep(1000);
+
                             receiveDataFormat = receive(receiveDataFormat);
+
+                            synchronized (notifySend) {
+                                notifySend.notifyAll();
+                            }
+
                             if (receiveDataFormat.isEmpty())
                                 continue;
+
                             synchronized (notifyFunc) {
-                                messageQueue.add(receiveDataFormat);
                                 notifyFunc.notifyAll();
                             }
-                        } catch (IOException | ClassNotFoundException e) {
+
+                        } catch (IOException | ClassNotFoundException | InterruptedException e) {
                             e.printStackTrace();
                         }
                         System.out.println("---------notifyAll------------");
@@ -171,6 +182,35 @@ public class RDTServerListener extends Thread implements ReliableFunction, Slidi
     }
 
 
+    public void sendThread() {
+        Runnable runnable =new Runnable() {
+            @Override
+            public void run() {
+                while(true) {
+                    DataFormat dataFormat = new DataFormat();
+                    synchronized (notifySend) {
+                        // 主线程等待唤醒。
+                        try {
+                            notifySend.wait();
+                            Transport.sendCall(dataFormat,socket,addressCon);
+                        } catch (IOException | InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        notifySend.notifyAll();
+                    }
+//                    try {
+//                        System.out.println(Thread.currentThread().getName() + " sleep");
+//                        sleep(TIME_WAIT);
+//                    } catch (InterruptedException e) {
+//                        e.printStackTrace();
+//                    }
+
+                }
+
+            }
+        };
+        new Thread(runnable,"sendThread").start();
+    }
 
 
     public void run() {
@@ -178,8 +218,10 @@ public class RDTServerListener extends Thread implements ReliableFunction, Slidi
             scannerThread();
             establishConnection();
             finishConnection();
-            goBackN();
+            selectiveRepeat();
             receiveThread();
+            sendThread();
+            timeOut();
 
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
@@ -220,6 +262,7 @@ public class RDTServerListener extends Thread implements ReliableFunction, Slidi
             @Override
             public void run() {
                 while (true) {
+
                     synchronized (notifyFunc) {
                         try {
                             // 打印输出结果
@@ -245,8 +288,22 @@ public class RDTServerListener extends Thread implements ReliableFunction, Slidi
 
 
     @Override
-    public boolean timeOut() {
-        return false;
+    public void timeOut() {
+        Runnable runnable =new Runnable() {
+            @Override
+            public void run() {
+                while (true) {
+                    try {
+                        sleep(TIME_WAIT);
+                        Transport.timeOut();
+                    } catch (InterruptedException | IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        };
+
+        new Thread(runnable,"TimeOut").start();
     }
 
     @Override
@@ -305,6 +362,7 @@ public class RDTServerListener extends Thread implements ReliableFunction, Slidi
                     try {
                         // 打印输出结果
                         // 唤醒当前的wait线程
+                        sleep(500);
                         System.out.println(Thread.currentThread().getName() + " wait");
                         notifyFunc.wait();
                         System.out.println("--------goBackNConnection----------");
@@ -337,6 +395,27 @@ public class RDTServerListener extends Thread implements ReliableFunction, Slidi
 
     @Override
     public void selectiveRepeat() {
-
+        Runnable runnable = () -> {
+            while (true) {
+                synchronized (notifyFunc) {
+                    try {
+                        // 打印输出结果
+                        // 唤醒当前的wait线程
+                        sleep(500);
+                        System.out.println(Thread.currentThread().getName() + " wait");
+                        notifyFunc.wait();
+                        System.out.println("--------selectiveRepeatNConnection----------");
+                        if (messageQueue.peek() != null)
+                            if (Selective.selectiveCore(messageQueue.peek(), socket, addressCon, connectionHashMap, selectiveHashMap))
+                                messageQueue.poll();
+                        // 打印输出结果
+                        System.out.println("--------selectiveRepeatNConnected----------");
+                    } catch (InterruptedException | IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        };
+        new Thread(runnable,"selectiveRepeat").start();
     }
 }

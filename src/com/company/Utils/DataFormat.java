@@ -4,7 +4,7 @@ import java.io.Serializable;
 import java.util.Arrays;
 
 public class DataFormat implements Serializable {
-    public static final Integer maxBuffer =400; //head 12
+    public static final Integer maxBuffer =100; //head 12
     public byte[] sourcePort=new byte[2];
     public byte[] destinationPort=new byte[2];
     public byte[] sequenceNumber=new byte[4];
