@@ -144,7 +144,7 @@ public class RDTServerListener extends Thread implements ReliableFunction, Slidi
                     synchronized (notifyObj) {
                         // 主线程等待唤醒。
                         try {
-                            sleep(1000);
+                            sleep(10);
 
                             receiveDataFormat = receive(receiveDataFormat);
 
@@ -167,13 +167,6 @@ public class RDTServerListener extends Thread implements ReliableFunction, Slidi
                         notifyObj.notifyAll();
 
                     }
-//                    try {
-//                        System.out.println(Thread.currentThread().getName() + " sleep");
-//                        sleep(TIME_WAIT);
-//                    } catch (InterruptedException e) {
-//                        e.printStackTrace();
-//                    }
-
                 }
 
             }
@@ -191,20 +184,12 @@ public class RDTServerListener extends Thread implements ReliableFunction, Slidi
                     synchronized (notifySend) {
                         // 主线程等待唤醒。
                         try {
-                            notifySend.wait();
+                            sleep(10);
                             Transport.sendCall(dataFormat,socket,addressCon);
                         } catch (IOException | InterruptedException e) {
                             e.printStackTrace();
                         }
-                        notifySend.notifyAll();
                     }
-//                    try {
-//                        System.out.println(Thread.currentThread().getName() + " sleep");
-//                        sleep(TIME_WAIT);
-//                    } catch (InterruptedException e) {
-//                        e.printStackTrace();
-//                    }
-
                 }
 
             }
@@ -308,112 +293,60 @@ public class RDTServerListener extends Thread implements ReliableFunction, Slidi
 
     @Override
     public void send(DataFormat sendData, Integer connectionPort) throws IOException, ClassNotFoundException {
-//        ByteArrayOutputStream byteOutStream = new ByteArrayOutputStream();
-//        ObjectOutputStream outputStream = new ObjectOutputStream(byteOutStream);
-//        outputStream.writeObject(sendData);
-//
-//        byte[] buf = byteOutStream.toByteArray();
-//        byteOutStream.close();
-//        outputStream.close();
-//
-//        DatagramPacket packet = new DatagramPacket(buf, buf.length, InetAddress.getByName(this.addressCon),this.connectionPort);
-//        socket.send(packet);
-//        System.out.println("---------send--------  sPort:"+sendData.getSourcePort()+"dPort:"+sendData.getDestinationPort());
         Transport.send(sendData,socket,this.addressCon,connectionPort);
     }
 
     @Override
     public DataFormat receive(DataFormat receiveData) throws IOException, ClassNotFoundException {
         return Transport.receive(receiveData,socket);
-//        byte []buf = new byte[512];
-//        DatagramPacket packet = new DatagramPacket(buf, buf.length);
-//        socket.receive(packet);
-////                String receive = new String(packet.getData(), 0, packet.getLength());
-//        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(buf);
-//
-//        //包装流 ：对象流
-//        ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream);
-//
-//        //内存输入流 读取对象信息
-//        Object object = objectInputStream.readObject();
-//
-//        receiveData = (DataFormat) object;
-//
-//        byteArrayInputStream.close();
-//        objectInputStream.close();
-//        if(receiveData.getPrimitiveType().equals(PrimitiveType.getSynType()))
-//            System.out.println("---------receive Syn------");
-//        else if(receiveData.getPrimitiveType().equals(PrimitiveType.getSynType()))
-//            System.out.println("---------receive Fin------");
-//        else  if(receiveData.getPrimitiveType().equals(PrimitiveType.getAckType()))
-//            System.out.println("---------receive ACK------");
-//        else
-//            System.out.println("---------receive Wrong type of Message------");
-//
-//
-//        return receiveData;
     }
 
     @Override
     public void goBackN() {
         Runnable runnable = () -> {
             while (true) {
-                synchronized (notifyFunc) {
-                    try {
-                        // 打印输出结果
-                        // 唤醒当前的wait线程
-                        sleep(500);
-                        System.out.println(Thread.currentThread().getName() + " wait");
-                        notifyFunc.wait();
-                        System.out.println("--------goBackNConnection----------");
-                        if (messageQueue.peek() != null)
-                            if (GoBackN.goBackNCore(messageQueue.peek(), socket, addressCon, connectionHashMap, goBackNHashMap))
-                                messageQueue.poll();
-                        // 打印输出结果
-                        System.out.println("--------goBackNConnected----------");
-                    } catch (InterruptedException | IOException e) {
+                try {
+                    sleep(50);
+                    int len = messageQueue.size();
+                    for(int i=0;i<len;++i) {
+                    assert messageQueue.peek() != null;
+
+                        if (GoBackN.goBackNCore(messageQueue.peek(), socket, addressCon, connectionHashMap, goBackNHashMap)) {
+                            messageQueue.poll();
+                        }
+                        else
+                            break;
+                         }
+                    } catch (IOException |InterruptedException e) {
                         e.printStackTrace();
                     }
                 }
-            }
         };
         new Thread(runnable,"goBackN").start();
-//        int sourcePort = dataFormat.getSourcePort();
-//        if(dataFormat.getPrimitiveType().equals(PrimitiveType.getAckType())) {
-//            if (connectionHashMap.containsKey(sourcePort)) {
-//                if (connectionHashMap.get(sourcePort).isConnected()) {
-//                    if (!goBackNHashMap.containsKey(sourcePort)) {
-//                        goBackNHashMap.put(sourcePort, new GoBackN(true, this.addressCon, this.connectionPort, socket));
-//                    }
-//                    goBackNHashMap.get(sourcePort).getACK(dataFormat, socket);
-//                }
-//            } else {
-//                System.out.println("-----非连接端口请求-------");
-//            }
-//        }
+
     }
 
     @Override
     public void selectiveRepeat() {
         Runnable runnable = () -> {
             while (true) {
-                synchronized (notifyFunc) {
                     try {
                         // 打印输出结果
                         // 唤醒当前的wait线程
-                        sleep(500);
-                        System.out.println(Thread.currentThread().getName() + " wait");
-                        notifyFunc.wait();
-                        System.out.println("--------selectiveRepeatNConnection----------");
-                        if (messageQueue.peek() != null)
-                            if (Selective.selectiveCore(messageQueue.peek(), socket, addressCon, connectionHashMap, selectiveHashMap))
+                        sleep(50);
+                        int len = messageQueue.size();
+                        for(int i=0;i<len;++i) {
+                            assert messageQueue.peek() != null;
+                            if (Selective.selectiveCore(messageQueue.peek(), socket, addressCon, connectionHashMap, selectiveHashMap)) {
                                 messageQueue.poll();
+                            }
+                            else
+                                break;
+                        }
                         // 打印输出结果
-                        System.out.println("--------selectiveRepeatNConnected----------");
                     } catch (InterruptedException | IOException e) {
                         e.printStackTrace();
                     }
-                }
             }
         };
         new Thread(runnable,"selectiveRepeat").start();

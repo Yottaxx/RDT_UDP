@@ -163,7 +163,7 @@ public class GoBackN {
                 System.out.println("-----------删除应答点" + ackNum + this.ackList.remove()
                         + "------------" + Arrays.toString(this.ackList.toArray()));
                 System.out.println("-----------捕捉到应答点" + ackNum + "------------");
-                timeOutReMessage.remove(ackNum);
+                Transport.timeOutManageRemove(ackNum);
 
 //                pointerSendBegin = ackNum;
                 if(ackNum+sendWindowSize>=MAX_SEQUENCE_NUM && !ackList.isEmpty()) {
@@ -288,7 +288,7 @@ public class GoBackN {
                 else {
                     System.out.println("--------加入应答点" + (dataFormat.getSequenceNumber() + 1) + "----------");
                     this.ackList.offer(dataFormat.getSequenceNumber() + 1);
-                    timeOutReMessage.put(dataFormat.getSequenceNumber() + 1,3);
+                    Transport.timeOutManageInsert(dataFormat.getSequenceNumber() + 1,dataFormat);
                 }
                 System.out.println(Arrays.toString(ackList.toArray()));
             }
@@ -335,7 +335,7 @@ public class GoBackN {
                     else {
                         System.out.println("--------加入应答点" + (dataFormat.getSequenceNumber() + 1) + "----------");
                         this.ackList.offer(dataFormat.getSequenceNumber() + 1);
-                        timeOutReMessage.put(dataFormat.getSequenceNumber() + 1,3);
+                        Transport.timeOutManageInsert(dataFormat.getSequenceNumber() + 1,dataFormat);
                     }
                     System.out.println(Arrays.toString(ackList.toArray()));
                 }

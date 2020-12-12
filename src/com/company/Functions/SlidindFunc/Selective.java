@@ -60,7 +60,7 @@ public class Selective {
 
     public Selective(boolean isServer, String addressCon, Integer connectionPort, DatagramSocket socket)
     {
-        System.out.println("--------GoBackN------"+addressCon);
+        System.out.println("--------Selective------"+addressCon);
         this.isServer = isServer;
         this.addressCon=addressCon;
         this.connectionPort = connectionPort;
@@ -166,8 +166,8 @@ public class Selective {
             + "------------" + Arrays.toString(this.ackList.toArray()));
 
             //timeout
-            timeOutReMessage.remove(ackNum);
-
+//            timeOutReMessage.remove(ackNum);
+            Transport.timeOutManageRemove(ackNum);
 
             this.sendSet.remove(ackNum);
             System.out.println("-----------捕捉到应答点" + ackNum + "------------");
@@ -307,8 +307,7 @@ public class Selective {
                 }
                 else {
                     System.out.println("--------加入应答点" + (dataFormat.getSequenceNumber() + 1) + "----------");
-                    this.ackList.add(dataFormat.getSequenceNumber() + 1);
-                    timeOutReMessage.put(dataFormat.getSequenceNumber() + 1,3);
+                    Transport.timeOutManageInsert(dataFormat.getSequenceNumber() + 1,dataFormat);
                 }
                 System.out.println(Arrays.toString(ackList.toArray()));
             }
@@ -356,7 +355,10 @@ public class Selective {
                 else {
                     System.out.println("--------加入应答点" + (dataFormat.getSequenceNumber() + 1) + "----------");
                     this.ackList.add(dataFormat.getSequenceNumber() + 1);
-                    timeOutReMessage.put(dataFormat.getSequenceNumber() + 1,3);
+;
+
+                    Transport.timeOutManageInsert(dataFormat.getSequenceNumber() + 1,dataFormat);
+
 
                 }
                 System.out.println(Arrays.toString(ackList.toArray()));
