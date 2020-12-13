@@ -1,5 +1,6 @@
 package com.company.Functions.SlidindFunc;
 
+import com.company.Functions.Congestion.Congestion;
 import com.company.Functions.Reliable.EstablishConnection;
 import com.company.Functions.Reliable.FinishConnection;
 import com.company.Functions.Transport.Transport;
@@ -209,12 +210,16 @@ public class Selective {
 
                 System.out.println(Arrays.toString(ackList.toArray()));
                 if ((pointerSendBegin + sendWindowSize - 1) >= MAX_SEQUENCE_NUM) {
-                    selectiveNSend(socket, addressCon, connectionPort, (pointerSendEnd+1)%MAX_SEQUENCE_NUM, new byte[Math.max(MAX_SEQUENCE_NUM - pointerSendEnd, 1)]);
+                    selectiveNSend(socket, addressCon, connectionPort,
+                            (pointerSendEnd+1)%MAX_SEQUENCE_NUM,
+                            new byte[(int) Math.min(Math.max(MAX_SEQUENCE_NUM - pointerSendEnd, 1),Congestion.CWND)]);
                     pointerSendEnd = 0;
                     pointerSendBegin = 0;
 
                 } else {
-                    selectiveNSend(socket, addressCon, connectionPort, (pointerSendEnd+1)%MAX_SEQUENCE_NUM, new byte[Math.max(pointerSendBegin + sendWindowSize - 1 - pointerSendEnd, 1)]);
+                    selectiveNSend(socket, addressCon, connectionPort,
+                            (pointerSendEnd+1)%MAX_SEQUENCE_NUM,
+                            new byte[(int) Math.min(Math.max(pointerSendBegin + sendWindowSize - 1 - pointerSendEnd, 1), Congestion.CWND)]);
                     pointerSendEnd = pointerSendBegin + sendWindowSize - 1;
                 }
             }

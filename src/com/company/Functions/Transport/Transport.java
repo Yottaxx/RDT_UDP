@@ -1,5 +1,6 @@
 package com.company.Functions.Transport;
 
+import com.company.Functions.Congestion.Congestion;
 import com.company.Utils.DataFormat;
 import com.company.Utils.PrimitiveType;
 
@@ -21,6 +22,7 @@ public class Transport {
     public static final ConcurrentHashMap<Integer,Integer> timeChanceReMessage = new ConcurrentHashMap<Integer,Integer>();//3次重传 即丢弃
     public static final Random random = new Random(1000);
     public static final float lossRate = 0.1f;
+
     public static void timeOut() throws IOException {
         for (Map.Entry<Integer, Integer> entry : timeOutReMessage.entrySet()) {
             if(entry.getValue().equals(0) && entry.getKey()!=0)
@@ -35,6 +37,7 @@ public class Transport {
 
                 if(sendSet.get(entry.getKey())!=null) {
                     send(sendSet.get(entry.getKey()));
+                    Congestion.timeOut();
                     if(!timeChanceReMessage.contains(entry.getKey()))
                         timeChanceReMessage.put(entry.getKey(),1);
                     else
@@ -152,69 +155,16 @@ public class Transport {
 
     public static  void timeOutManageInsert(Integer ack,DataFormat dataFormat)
     {
-        timeOutReMessage.put(dataFormat.getSequenceNumber() + 1,3);
-        sendSet.put(dataFormat.getSequenceNumber() + 1,dataFormat);
+        timeOutReMessage.put(ack,3);
+        sendSet.put(ack,dataFormat);
     }
 
     public static void  timeOutManageRemove(Integer ack)
     {
         timeOutReMessage.remove(ack);
+        Congestion.getACK(sendSet.get(ack).getBuf().length);
         sendSet.remove(ack);
     }
 
-//    public static void send(DatagramSocket socket, String addressCon, Integer connectionPort,Integer sequenceNum,byte[] data) throws IOException {
-//            int now = 0;
-//            for(int i=0;i<data.length/DataFormat.maxBuffer+1;++i)
-//            {
-//                DataFormat dataFormat =new DataFormat();
-//                dataFormat.setSourcePort(socket.getLocalPort());
-//                dataFormat.setDestinationPort(connectionPort);
-//                dataFormat.setPrimitiveType(new PrimitiveType(PrimitiveType.getAckType()));
-//
-//                if(i==data.length/DataFormat.maxBuffer)
-//                {
-//                    dataFormat.setBuf(Arrays.copyOfRange(data,i*DataFormat.maxBuffer,data.length));
-//                    dataFormat.setSequenceNumber(sequenceNum+now+dataFormat.getBuf().length-1);
-//                    now = now+data.length%DataFormat.maxBuffer;
-//                }
-//                else
-//                {
-//                    dataFormat.setBuf(Arrays.copyOfRange(data,i*DataFormat.maxBuffer,(i+1)*DataFormat.maxBuffer));
-//                    dataFormat.setSequenceNumber(sequenceNum+now+dataFormat.getBuf().length-1);
-//                    now = now+DataFormat.maxBuffer;
-//                }
-//                send(dataFormat,socket,addressCon,connectionPort);
-//            }
-//    }
-//
-//    public static void send(DatagramSocket socket, String addressCon, Integer connectionPort,Integer sequenceNum,byte[] data,Integer window,Integer ackNum) throws IOException {
-//        int now = 0;
-//        for(int i=0;i<data.length/DataFormat.maxBuffer+1;++i)
-//        {
-//            DataFormat dataFormat =new DataFormat();
-//            dataFormat.setSourcePort(socket.getLocalPort());
-//            dataFormat.setDestinationPort(connectionPort);
-//            dataFormat.setPrimitiveType(new PrimitiveType(PrimitiveType.getAckType()));
-//            dataFormat.setAcknowledgementNumber(ackNum);
-//            if(i==data.length/DataFormat.maxBuffer)
-//            {
-//                if(data.length%DataFormat.maxBuffer==0)
-//                    return;
-//                dataFormat.setBuf(Arrays.copyOfRange(data,i*DataFormat.maxBuffer,data.length%DataFormat.maxBuffer));
-//                dataFormat.setSequenceNumber(sequenceNum+now+dataFormat.getBuf().length-1);
-//
-//                now = now+data.length%DataFormat.maxBuffer;
-//                dataFormat.setWindow(max(window-data.length,0));
-//            }
-//            else
-//            {
-//                dataFormat.setWindow(DataFormat.maxBuffer);
-//                dataFormat.setBuf(Arrays.copyOfRange(data,i*DataFormat.maxBuffer,DataFormat.maxBuffer));
-//                dataFormat.setSequenceNumber(sequenceNum+now+dataFormat.getBuf().length-1);
-//                now = now+DataFormat.maxBuffer;
-//            }
-//            send(dataFormat,socket,addressCon,connectionPort);
-//        }
-//    }
 
 }
