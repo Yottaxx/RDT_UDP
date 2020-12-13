@@ -31,8 +31,10 @@ public class Transport {
                 System.out.println(sendSet.toString());
                 if(timeChanceReMessage.contains(entry.getKey()))
                 {
-                   if(timeChanceReMessage.get(entry.getKey())==3)
+                   if(timeChanceReMessage.get(entry.getKey())==3) {
                        timeOutReMessage.remove(entry.getKey());
+                        continue;
+                   }
                 }
 
                 if(sendSet.get(entry.getKey())!=null) {

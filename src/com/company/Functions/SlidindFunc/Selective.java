@@ -26,7 +26,7 @@ public class Selective {
     public static final Integer MAX_SEQUENCE_NUM =10240;
     private String addressCon;
     private Integer connectionPort;
-    private  Integer serverWindows =1000;
+    private  Integer serverWindows =2048;
     private DataFormat dataFormat;
     private boolean newData = false;
     public final DatagramSocket socket;
@@ -224,6 +224,30 @@ public class Selective {
                 }
             }
             return true;
+        }
+        else if(ackList.isEmpty())
+        {
+            if(pointerSendBegin + sendWindowSize - 1 - pointerSendEnd > 0) {
+                System.out.println("-----------还能发送" + (pointerSendBegin + sendWindowSize - 1 - pointerSendEnd) + "字节数据------------");
+                System.out.println("-----------从" + (pointerSendEnd) + "开始发送------------");
+                System.out.println("-----------从" + (pointerSendBegin) + "开始发送------------");
+                System.out.println("-----------从" + (sendWindowSize) + "开始发送------------");
+
+                System.out.println(Arrays.toString(ackList.toArray()));
+                if ((pointerSendBegin + sendWindowSize - 1) >= MAX_SEQUENCE_NUM) {
+                    selectiveNSend(socket, addressCon, connectionPort,
+                            (pointerSendEnd+1)%MAX_SEQUENCE_NUM,
+                            new byte[(int) Math.min(Math.max(MAX_SEQUENCE_NUM - pointerSendEnd, 1),Congestion.CWND)]);
+                    pointerSendEnd = 0;
+                    pointerSendBegin = 0;
+
+                } else {
+                    selectiveNSend(socket, addressCon, connectionPort,
+                            (pointerSendEnd+1)%MAX_SEQUENCE_NUM,
+                            new byte[(int) Math.min(Math.max(pointerSendBegin + sendWindowSize - 1 - pointerSendEnd, 1), Congestion.CWND)]);
+                    pointerSendEnd = pointerSendBegin + sendWindowSize - 1;
+                }
+            }
         }
         return false;//不需要回复
     }
