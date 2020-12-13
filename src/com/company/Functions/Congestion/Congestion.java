@@ -38,7 +38,7 @@ public class Congestion {
 
     public static void timeOut()
     {
-        SS_THRESH=SS_THRESH/2;
+        SS_THRESH=Math.max(SS_THRESH/2,512);
         CWND=SS_THRESH;
         System.out.println("--------出现超时 阈值减半 窗口复位--------");
     }
