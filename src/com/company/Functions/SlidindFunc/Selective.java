@@ -146,6 +146,8 @@ public class Selective {
         }
         int ackNum = dataFormat.getAcknowledgementNumber();
 
+        Congestion.calculateAnswerTimes(ackNum);
+
         if (ackNum == -1) {
             beginSend(dataFormat,socket);
             return true;

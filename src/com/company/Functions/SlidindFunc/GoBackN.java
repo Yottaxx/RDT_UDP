@@ -1,5 +1,6 @@
 package com.company.Functions.SlidindFunc;
 
+import com.company.Functions.Congestion.Congestion;
 import com.company.Functions.Reliable.EstablishConnection;
 import com.company.Functions.Reliable.FinishConnection;
 import com.company.Functions.Transport.Transport;
@@ -141,9 +142,11 @@ public class GoBackN {
                 System.out.println("Go Back N 捕获到非ACK消息");
                 return false;
             }
-            int ackNum = dataFormat.getAcknowledgementNumber();
 
-            if (ackNum == -1) {
+            int ackNum = dataFormat.getAcknowledgementNumber();
+            Congestion.calculateAnswerTimes(ackNum);
+
+        if (ackNum == -1) {
                beginSend(dataFormat,socket);
                return true;
             }
