@@ -89,8 +89,8 @@ public class GoBackN {
         this.connectionPort = connectionPort;
     }
     public static boolean goBackNCore(DataFormat dataFormat, DatagramSocket socket,
-                                           String addressCon, HashMap<Integer, EstablishConnection> connectionHashMap,
-                                           HashMap<Integer, GoBackN> goBackNHashMap) throws IOException {
+                                           String addressCon, ConcurrentHashMap<Integer, EstablishConnection> connectionHashMap,
+                                      ConcurrentHashMap<Integer, GoBackN> goBackNHashMap) throws IOException {
         int sourcePort = dataFormat.getSourcePort();
         if(dataFormat.getPrimitiveType().equals(PrimitiveType.getAckType())) {
             if (connectionHashMap.containsKey(sourcePort)) {

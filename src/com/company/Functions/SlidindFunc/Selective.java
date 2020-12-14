@@ -26,7 +26,7 @@ public class Selective {
     public static final Integer MAX_SEQUENCE_NUM =10240;
     private String addressCon;
     private Integer connectionPort;
-    private  Integer serverWindows =2048;
+    private  Integer serverWindows =5120;
     private DataFormat dataFormat;
     private boolean newData = false;
     public final DatagramSocket socket;
@@ -91,8 +91,8 @@ public class Selective {
         this.connectionPort = connectionPort;
     }
     public static boolean selectiveCore(DataFormat dataFormat, DatagramSocket socket,
-                                      String addressCon, HashMap<Integer, EstablishConnection> connectionHashMap,
-                                      HashMap<Integer, Selective> selectiveHashMapNHashMap) throws IOException {
+                                      String addressCon, ConcurrentHashMap<Integer, EstablishConnection> connectionHashMap,
+                                        ConcurrentHashMap<Integer, Selective> selectiveHashMapNHashMap) throws IOException {
         int sourcePort = dataFormat.getSourcePort();
         if(dataFormat.getPrimitiveType().equals(PrimitiveType.getAckType())) {
             if (connectionHashMap.containsKey(sourcePort)) {
@@ -150,6 +150,7 @@ public class Selective {
 
         if (ackNum == -1) {
             beginSend(dataFormat,socket);
+            Transport.timeOutManageRemove(-1);
             return true;
         }
 
@@ -382,12 +383,12 @@ public class Selective {
                     this.pointerSendBegin=0;
                     System.out.println(pointerSendBegin+" "+pointerSendEnd);
                     System.out.println("--------达到上限重置0 加入应答点 over" + "----------");
+                    Transport.timeOutManageInsert(-1,dataFormat);
+
                 }
                 else {
                     System.out.println("--------加入应答点" + (dataFormat.getSequenceNumber() + 1) + "----------");
                     this.ackList.add(dataFormat.getSequenceNumber() + 1);
-;
-
                     Transport.timeOutManageInsert(dataFormat.getSequenceNumber() + 1,dataFormat);
 
 

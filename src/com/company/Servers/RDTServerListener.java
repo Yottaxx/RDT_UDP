@@ -15,6 +15,7 @@ import java.io.*;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 // TODO: 做消息队列，单独线程receive
@@ -27,12 +28,11 @@ public class RDTServerListener extends Thread implements ReliableFunction, Slidi
     public Thread listener;
     public final String addressCon = "localhost";
     public boolean isServer= true;
-    Queue<DataFormat> dataList=new LinkedList<DataFormat>();
-    HashMap<Integer, EstablishConnection> connectionHashMap = new HashMap<Integer, EstablishConnection>(); //port connection management
-    HashMap<Integer,Queue<Integer>> dataWindows = new HashMap<Integer,Queue<Integer>>();  // port receive datas
-    HashMap<Integer, FinishConnection> finishConnectionHashMap = new HashMap<Integer, FinishConnection>();
-    HashMap<Integer, GoBackN> goBackNHashMap =new HashMap<Integer, GoBackN>();
-    HashMap<Integer, Selective> selectiveHashMap =new HashMap<Integer, Selective>();
+    ConcurrentHashMap<Integer, EstablishConnection> connectionHashMap = new ConcurrentHashMap<Integer, EstablishConnection>(); //port connection management
+    ConcurrentHashMap<Integer,Queue<Integer>> dataWindows = new ConcurrentHashMap<Integer,Queue<Integer>>();  // port receive datas
+    ConcurrentHashMap<Integer, FinishConnection> finishConnectionHashMap = new ConcurrentHashMap<Integer, FinishConnection>();
+    ConcurrentHashMap<Integer, GoBackN> goBackNHashMap =new ConcurrentHashMap<Integer, GoBackN>();
+    ConcurrentHashMap<Integer, Selective> selectiveHashMap =new ConcurrentHashMap<Integer, Selective>();
 
     private final Object notifyObj = new Object();
     private final Object notifyFunc = new Object();

@@ -9,6 +9,7 @@ import java.net.DatagramSocket;
 import java.util.HashMap;
 import java.util.Queue;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class EstablishConnection {
@@ -43,7 +44,7 @@ public class EstablishConnection {
             return getDataClient(dataFormat);
     }
 
-    public static boolean establishConnectCore(DataFormat receiveDataFormat, DatagramSocket socket, String addressCon, HashMap<Integer, EstablishConnection> connectionHashMap) throws IOException {
+    public static boolean establishConnectCore(DataFormat receiveDataFormat, DatagramSocket socket, String addressCon, ConcurrentHashMap<Integer, EstablishConnection> connectionHashMap) throws IOException {
         System.out.println("判断是否为建立连接过程"+receiveDataFormat.getSourcePort()+" "+receiveDataFormat.getDestinationPort());
 
         if(receiveDataFormat.getPrimitiveType().equals(PrimitiveType.getSynType())) {

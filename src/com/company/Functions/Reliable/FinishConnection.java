@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.net.DatagramSocket;
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class FinishConnection {
     protected Integer sourcePort;
@@ -33,8 +34,8 @@ public class FinishConnection {
 
 
     public static boolean finishConnection(DataFormat receiveDataFormat, DatagramSocket socket,
-                                           String addressCon, HashMap<Integer, EstablishConnection> connectionHashMap,
-                                           HashMap<Integer, FinishConnection> finishConnectionHashMap) throws IOException {
+                                           String addressCon, ConcurrentHashMap<Integer, EstablishConnection> connectionHashMap,
+                                           ConcurrentHashMap<Integer, FinishConnection> finishConnectionHashMap) throws IOException {
 
         int sourcePort = receiveDataFormat.getSourcePort();
         System.out.println("判断是否为建立释放过程"+receiveDataFormat.getSourcePort()+" "+receiveDataFormat.getDestinationPort());

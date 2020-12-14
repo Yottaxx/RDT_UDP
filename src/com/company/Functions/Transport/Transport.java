@@ -21,29 +21,35 @@ public class Transport {
     public static final ConcurrentHashMap<Integer,Integer> timeOutReMessage = new ConcurrentHashMap<Integer,Integer>();//3倍超时 即可重传
     public static final ConcurrentHashMap<Integer,Integer> timeChanceReMessage = new ConcurrentHashMap<Integer,Integer>();//3次重传 即丢弃
     public static final Random random = new Random(1000);
-    public static final float lossRate = 0.1f;
+    public static final float lossRate = 0.000001f;
 
     public static void timeOut() throws IOException {
         for (Map.Entry<Integer, Integer> entry : timeOutReMessage.entrySet()) {
-            if(entry.getValue().equals(0) && entry.getKey()!=0)
+            if(timeChanceReMessage.contains(entry.getKey()))
+            {
+                if(timeChanceReMessage.get(entry.getKey())!=null) {
+                    if (timeChanceReMessage.get(entry.getKey()) >= 3) {
+                        if (timeOutReMessage.contains(entry.getKey()))
+                            timeOutReMessage.remove(entry.getKey());
+                        continue;
+                    }
+                }
+                else
+                    continue;
+            }
+
+            if(entry.getValue().equals(0) && entry.getKey() != 0)
             {
                 System.out.println("-------超时重传"+entry.getKey()+"----------");
                 System.out.println(sendSet.toString());
-                if(timeChanceReMessage.contains(entry.getKey()))
-                {
-                   if(timeChanceReMessage.get(entry.getKey())==3) {
-                       timeOutReMessage.remove(entry.getKey());
-                        continue;
-                   }
-                }
+                if(!timeChanceReMessage.contains(entry.getKey()))
+                    timeChanceReMessage.put(entry.getKey(),1);
+                else
+                    timeChanceReMessage.put(entry.getKey(),timeChanceReMessage.get(entry.getKey())+1);
 
                 if(sendSet.get(entry.getKey())!=null) {
                     send(sendSet.get(entry.getKey()));
                     Congestion.timeOut();
-                    if(!timeChanceReMessage.contains(entry.getKey()))
-                        timeChanceReMessage.put(entry.getKey(),1);
-                    else
-                        timeChanceReMessage.put(entry.getKey(),timeChanceReMessage.get(entry.getKey())+1);
 
                 }
                 continue;
@@ -164,8 +170,10 @@ public class Transport {
     public static void  timeOutManageRemove(Integer ack)
     {
         timeOutReMessage.remove(ack);
-        Congestion.getACK(sendSet.get(ack).getBuf().length);
-        sendSet.remove(ack);
+        if(sendSet.get(ack)!=null) {
+            Congestion.getACK(sendSet.get(ack).getBuf().length);
+            sendSet.remove(ack);
+        }
     }
 
 

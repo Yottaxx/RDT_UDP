@@ -52,13 +52,13 @@ public class Congestion {
 
     public static void calculateAnswerTimes(int ack)
     {
-        if(ack==-1)
-            answerTime.clear();
 
-        if(answerTime.contains(ack))
+        if(answerTime.contains(ack) )
         {
+            if(answerTime.get(ack)==null)
+                return ;
             answerTime.put(ack,answerTime.get(ack)+1);
-            if(answerTime.get(ack).equals(3))
+            if(answerTime.get(ack).equals(3) && answerTime.get(ack)!=null)
             {
                 answerTime.remove(ack);
                 duplicateACK();
